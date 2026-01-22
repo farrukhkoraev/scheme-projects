@@ -1,6 +1,7 @@
 #lang racket
 
 (require racket/file)
+(require racket/pretty)
 
 (define nil 'nil)
 
@@ -113,11 +114,8 @@
 (define ws 
   (many (span-p char-whitespace?)))
 
-((sep-p (left (right ws (char-p #\,)) ws)
-		(satisfy char-numeric?)) "1, 2, 3, 5,")
 
 ;Json Parser
-
 (define json-value
   (λ (inp) 
 	((either 
@@ -183,10 +181,11 @@
 	  [(cons r "") (build-ht r)]
 	  [_ 'nil])))
 
-
-(define js-data 
-   (json-parser (string-trim (file->string "file.json"))))
-
+(module+ main 
+	(define js-data 
+	   (json-parser (string-trim (file->string "file.json"))))
+	(pretty-print js-data)
+  )
 
 
 
