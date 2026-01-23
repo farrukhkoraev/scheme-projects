@@ -20,6 +20,19 @@ A monadic parser combinator library built from scratch, demonstrating:
 racket parser.rkt
 ```
 
+### Monads (`monads.rkt`)
+
+Monad implementations and do-notation in Racket, exploring:
+- Maybe monad for handling optional values
+- List monad for non-deterministic computation
+- Custom `do` macro for monadic composition
+- Functor, Applicative, and Monad interfaces
+
+**Usage:**
+```bash
+racket monads.rkt
+```
+
 ## Planned Explorations
 
 - Continuations and control flow
