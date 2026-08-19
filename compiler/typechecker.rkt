@@ -6,7 +6,16 @@
          "types.rkt")
 
 
-(define fresh-env (hasheq))
+(define fresh-env
+  (hasheq '+  (function-t '(int int) 'int)
+          '-  (function-t '(int int) 'int)
+          '*  (function-t '(int int) 'int)
+          '/  (function-t '(int int) 'int)
+          '>  (function-t '(int int) 'bool)
+          '>= (function-t '(int int) 'bool)
+          '<  (function-t '(int int) 'bool)
+          '<= (function-t '(int int) 'bool)
+          '=  (function-t '(int int) 'bool)))
 
 (define (extend-env env name val)
   (hash-set env name val)) 
@@ -24,17 +33,30 @@
 
 (define (check-top form env)
   (match form
-    [(tl-definition name (expr-lambda xs body))
-     ()
-     ]
+    [(tl-definition name (expr-lambda params body))
+     (check-func-definition (lookup-in env name) params body env)]
+    
     [(tl-definition name expr)
      (let ([t1 (lookup-in env name)]
            [t2 (check-expr expr env)])
-       (unless (type-equal? t1 t2)
-         (error (format "error: type mismatch for ~a, expected ~a actual ~a"
-                        name t1 t2)))
-       t1)]
-    ))
+       (if (type-equal? t1 t2) t1
+           (error (format "error: type mismatch for ~a, expected ~a actual ~a"
+                        name t1 t2))))]))
+
+(define (check-func-definition type params body env)
+  (define env*
+    (foldl (λ (t n e) (extend-env e n t))
+           env
+           (function-t-params type)
+           params))
+  
+  (let ([t (function-t-return type)]
+        [t* (check-expr body env*)])
+    (unless (type-equal? t t*)
+      (error (format "type error: expected return type ~a, got ~a"
+                     t t*)))
+    type))
+
 
 (define (check-expr expr env)
   (match expr
@@ -43,7 +65,8 @@
     [(expr-if cnd thn els) (check-if-expr cnd thn els env)]
     [(expr-let bs body) (check-let-expr bs body env)]
     [(expr-begin exprs) (check-exprs exprs env)]
-    [(expr-lambda params body) (error "lambda expressions are not allowed")]))
+    [(expr-call fn args) (check-call-expr fn args env)]
+    [(expr-lambda _ _) (error "lambda expressions are not allowed")]))
 
 (define (check-if-expr cnd thn els env)
   (let ([t (check-expr cnd env)])
@@ -81,10 +104,18 @@
                         t t*)))
        (check-expr body (extend-env env n t)))]))
 
-(define (check-lambda-expr params body env)
-  ()
+(define (check-call-expr func args env)
+  (match (check-expr func env)
+    [(function-t ps ret)
+     (let ([ts (foldl (λ (e es)
+                        (cons (check-expr e env) es))
+                      '() args)])
+       (unless (equal? ps ts)
+         (error (format "type error: ~a expects ~a, got ~a" func ps ts )))
+       ret)]
+    [_ (error (format  "type error: ~a is not a function type" func))]))
 
-  )
+
 (define (check-program p)
   (define (collect forms env)
     (match forms
@@ -93,8 +124,9 @@
        (collect rest
                 (extend-env env name type))]
       [(list _ rest ...) (collect rest env)]))
-  
+
   (let ([env* (collect p fresh-env)])
+    (displayln env*)
     (map (λ (f) (check-top f env*))
          (filter tl-definition? p))
     p))

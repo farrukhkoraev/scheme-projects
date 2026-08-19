@@ -41,4 +41,7 @@
 
 (provide parse-type
          type->string
-         type-equal?)
+         type-equal?
+         function-t
+         function-t-params
+         function-t-return)
